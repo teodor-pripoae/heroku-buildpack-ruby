@@ -5,7 +5,6 @@ require "rubygems"
 require "language_pack"
 require "language_pack/base"
 require "language_pack/ruby_version"
-require "language_pack/helpers/node_installer"
 require "language_pack/version"
 
 # base Ruby Language Pack. This is for any base ruby app.
@@ -18,9 +17,8 @@ class LanguagePack::Ruby < LanguagePack::Base
   JVM_BASE_URL         = "http://heroku-jdk.s3.amazonaws.com"
   LATEST_JVM_VERSION   = "openjdk7-latest"
   LEGACY_JVM_VERSION   = "openjdk1.7.0_25"
-  DEFAULT_RUBY_VERSION = "ruby-2.0.0"
+  DEFAULT_RUBY_VERSION = "ruby-2.1.5"
   RBX_BASE_URL         = "http://binaries.rubini.us/heroku"
-  NODE_BP_PATH         = "vendor/node/bin"
 
   # detects if this is a valid Ruby app
   # @return [Boolean] true if it's a Ruby app
@@ -43,7 +41,6 @@ class LanguagePack::Ruby < LanguagePack::Base
     @fetchers[:mri]    = LanguagePack::Fetcher.new(VENDOR_URL, @stack)
     @fetchers[:jvm]    = LanguagePack::Fetcher.new(JVM_BASE_URL)
     @fetchers[:rbx]    = LanguagePack::Fetcher.new(RBX_BASE_URL, @stack)
-    @node_installer    = LanguagePack::NodeInstaller.new(@stack)
   end
 
   def name
@@ -95,7 +92,6 @@ class LanguagePack::Ruby < LanguagePack::Base
         post_bundler
         create_database_yml
         install_binaries
-        run_assets_precompile_rake_task
       end
       super
     end
@@ -207,7 +203,6 @@ private
     instrument 'ruby.setup_language_pack_environment' do
       ENV["PATH"] += ":bin" if ruby_version.jruby?
       setup_ruby_install_env
-      ENV["PATH"] += ":#{node_bp_bin_path}" if node_js_installed?
 
       # TODO when buildpack-env-args rolls out, we can get rid of
       # ||= and the manual setting below
@@ -382,7 +377,7 @@ ERROR
   # default set of binaries to install
   # @return [Array] resulting list
   def binaries
-    add_node_js_binary
+    []
   end
 
   # vendors binaries into the slug
@@ -395,16 +390,11 @@ ERROR
 
   # vendors individual binary into the slug
   # @param [String] name of the binary package from S3.
-  #   Example: https://s3.amazonaws.com/language-pack-ruby/node-0.4.7.tgz, where name is "node-0.4.7"
   def install_binary(name)
     bin_dir = "bin"
     FileUtils.mkdir_p bin_dir
     Dir.chdir(bin_dir) do |dir|
-      if name.match(/^node\-/)
-        @node_installer.install
-      else
-        @fetchers[:buildpack].fetch_untar("#{name}.tgz")
-      end
+      @fetchers[:buildpack].fetch_untar("#{name}.tgz")
     end
   end
 
@@ -677,49 +667,6 @@ params = CGI.parse(uri.query || "")
   # @return [Array] the database addon if the pg gem is detected or an empty Array if it isn't.
   def add_dev_database_addon
     bundler.has_gem?("pg") ? ['heroku-postgresql:hobby-dev'] : []
-  end
-
-  # decides if we need to install the node.js binary
-  # @note execjs will blow up if no JS RUNTIME is detected and is loaded.
-  # @return [Array] the node.js binary path if we need it or an empty Array
-  def add_node_js_binary
-    bundler.has_gem?('execjs') && !node_js_installed? ? [@node_installer.binary_path] : []
-  end
-
-  def node_bp_bin_path
-    "#{Dir.pwd}/#{NODE_BP_PATH}"
-  end
-
-  # checks if node.js is installed via the official heroku-buildpack-nodejs using multibuildpack
-  # @return [Boolean] true if it's detected and false if it isn't
-  def node_js_installed?
-    @node_js_installed ||= run("#{node_bp_bin_path}/node -v") && $?.success?
-  end
-
-  def run_assets_precompile_rake_task
-    instrument 'ruby.run_assets_precompile_rake_task' do
-
-      precompile = rake.task("assets:precompile")
-      return true unless precompile.is_defined?
-
-      topic "Precompiling assets"
-      precompile.invoke(env: rake_env)
-      if precompile.success?
-        puts "Asset precompilation completed (#{"%.2f" % precompile.time}s)"
-      else
-        precompile_fail(precompile.output)
-      end
-    end
-  end
-
-  def precompile_fail(output)
-    log "assets_precompile", :status => "failure"
-    msg = "Precompiling assets failed.\n"
-    if output.match(/(127\.0\.0\.1)|(org\.postgresql\.util)/)
-      msg << "Attempted to access a nonexistent database:\n"
-      msg << "https://devcenter.heroku.com/articles/pre-provision-database\n"
-    end
-    error msg
   end
 
   def bundler_cache

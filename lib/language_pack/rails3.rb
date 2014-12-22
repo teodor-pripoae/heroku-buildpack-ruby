@@ -44,7 +44,7 @@ private
   def install_plugins
     instrument "rails3.install_plugins" do
       return false if bundler.has_gem?('rails_12factor')
-      plugins = {"rails_log_stdout" => "rails_stdout_logging", "rails3_serve_static_assets" => "rails_serve_static_assets" }.
+      plugins = {"rails_log_stdout" => "rails_stdout_logging"}.
                  reject { |plugin, gem| bundler.has_gem?(gem) }
       return false if plugins.empty?
       plugins.each do |plugin, gem|
@@ -55,42 +55,16 @@ private
     end
   end
 
-  # runs the tasks for the Rails 3.1 asset pipeline
-  def run_assets_precompile_rake_task
-    instrument "rails3.run_assets_precompile_rake_task" do
-      log("assets_precompile") do
-        if File.exists?("public/assets/manifest.yml")
-          puts "Detected manifest.yml, assuming assets were compiled locally"
-          return true
-        end
-
-        precompile = rake.task("assets:precompile")
-        return true unless precompile.is_defined?
-
-        topic("Preparing app for Rails asset pipeline")
-
-        precompile.invoke(env: rake_env)
-
-        if precompile.success?
-          log "assets_precompile", :status => "success"
-          puts "Asset precompilation completed (#{"%.2f" % precompile.time}s)"
-        else
-          precompile_fail(precompile.output)
-        end
-      end
-    end
-  end
-
   def rake_env
     if user_env_hash.empty?
       default_env = {
-        "RAILS_GROUPS" => ENV["RAILS_GROUPS"] || "assets",
+        "RAILS_GROUPS" => ENV["RAILS_GROUPS"] || "production",
         "RAILS_ENV"    => ENV["RAILS_ENV"]    || "production",
         "DATABASE_URL" => database_url
       }
     else
       default_env = {
-        "RAILS_GROUPS" => "assets",
+        "RAILS_GROUPS" => "production",
         "RAILS_ENV"    => "production",
         "DATABASE_URL" => database_url
       }
