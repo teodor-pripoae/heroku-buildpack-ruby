@@ -575,15 +575,7 @@ ERROR
   end
 
   def rake_env
-    if database_url
-      { "DATABASE_URL" => database_url }
-    else
-      {}
-    end.merge(user_env_hash)
-  end
-
-  def database_url
-    env("DATABASE_URL") if env("DATABASE_URL")
+    ENV
   end
 
   # executes the block with GIT_DIR environment variable removed since it can mess with the current working directory git thinks it's in

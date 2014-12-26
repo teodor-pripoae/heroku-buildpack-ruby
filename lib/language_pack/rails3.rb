@@ -68,38 +68,6 @@ private
   end
 
   def rake_env
-    if user_env_hash.empty?
-      default_env = {
-        "RAILS_GROUPS" => ENV["RAILS_GROUPS"] || "production",
-        "RAILS_ENV"    => ENV["RAILS_ENV"]    || "production",
-        "DATABASE_URL" => database_url
-      }
-    else
-      default_env = {
-        "RAILS_GROUPS" => "production",
-        "RAILS_ENV"    => "production",
-        "DATABASE_URL" => database_url
-      }
-    end
-    default_env.merge(user_env_hash)
-  end
-
-  # generate a dummy database_url
-  def database_url
-    instrument "rails3.setup_database_url_env" do
-      # need to use a dummy DATABASE_URL here, so rails can load the environment
-      return env("DATABASE_URL") if env("DATABASE_URL")
-      scheme =
-        if bundler.has_gem?("pg") || bundler.has_gem?("jdbc-postgres")
-          "postgres"
-      elsif bundler.has_gem?("mysql")
-        "mysql"
-      elsif bundler.has_gem?("mysql2")
-        "mysql2"
-      elsif bundler.has_gem?("sqlite3") || bundler.has_gem?("sqlite3-ruby")
-        "sqlite3"
-      end
-      "#{scheme}://user:pass@127.0.0.1/dbname"
-    end
+    ENV
   end
 end
