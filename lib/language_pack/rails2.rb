@@ -50,6 +50,18 @@ class LanguagePack::Rails2 < LanguagePack::Ruby
     end
   end
 
+  def run_migration
+    instrument "rails2.run_migration" do
+      super
+    end
+  end
+
+  def run_cequel_migration
+    instrument "rails2.run_cequel_migration" do
+      super
+    end
+  end
+
 private
 
   def install_plugins

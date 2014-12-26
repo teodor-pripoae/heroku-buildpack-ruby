@@ -40,6 +40,18 @@ class LanguagePack::Rails4 < LanguagePack::Rails3
     end
   end
 
+  def run_migration
+    instrument "rails4.run_migration" do
+      super
+    end
+  end
+
+  def run_cequel_migration
+    instrument "rails4.run_cequel_migration" do
+      super
+    end
+  end
+
   private
 
   def install_plugins

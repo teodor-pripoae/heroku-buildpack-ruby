@@ -39,6 +39,18 @@ class LanguagePack::Rails3 < LanguagePack::Rails2
     end
   end
 
+  def run_migration
+    instrument "rails3.run_migration" do
+      super
+    end
+  end
+
+  def run_cequel_migration
+    instrument "rails3.run_cequel_migration" do
+      super
+    end
+  end
+
 private
 
   def install_plugins

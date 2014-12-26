@@ -83,15 +83,15 @@ class LanguagePack::Ruby < LanguagePack::Base
       Dir.chdir(build_path)
       remove_vendor_bundle
       install_ruby
-      install_jvm
       setup_language_pack_environment
       setup_profiled
       allow_git do
         install_bundler_in_app
         build_bundler
         post_bundler
-        create_database_yml
         install_binaries
+        run_cequel_migration
+        run_migration
       end
       super
     end
@@ -666,6 +666,52 @@ params = CGI.parse(uri.query || "")
   # @return [Array] the database addon if the pg gem is detected or an empty Array if it isn't.
   def add_dev_database_addon
     bundler.has_gem?("pg") ? ['heroku-postgresql:hobby-dev'] : []
+  end
+
+  def run_migration
+    instrument "ruby.run_migration" do
+      log("run_migration") do
+        migrate = rake.task("db:migrate")
+        return true unless migrate.is_defined?
+
+        topic("Preparing app for running migrations")
+
+        migrate.invoke(env: rake_env)
+
+        if migrate.success?
+          log "run_migration", :status => "success"
+          puts "Database migration completed (#{"%.2f" % migrate.time}s)"
+        else
+          migrate_fail(migrate.output)
+        end
+      end
+    end
+  end
+
+  def run_cequel_migration
+    instrument "ruby.run_cequel_migration" do
+      log("run_cequel_migration") do
+        migrate = rake.task("cequel:migrate")
+        return true unless migrate.is_defined?
+
+        topic("Preparing app for running cassandra migrations")
+
+        migrate.invoke(env: rake_env)
+
+        if migrate.success?
+          log "run_cequel_migration", :status => "success"
+          puts "Cassandra migration completed (#{"%.2f" % migrate.time}s)"
+        else
+          migrate_fail(migrate.output)
+        end
+      end
+    end
+  end
+
+  def migrate_fail(output)
+    log "run_migration", :status => "failure"
+    msg = "Running migrations failed.\n"
+    error msg
   end
 
   def bundler_cache
