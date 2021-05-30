@@ -20,4 +20,10 @@ class LanguagePack::Rails6 < LanguagePack::Rails5
       super
     end
   end
+
+  def run_migration
+    instrument "rails6.run_migration" do
+      super
+    end
+  end
 end

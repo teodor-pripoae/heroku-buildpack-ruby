@@ -109,6 +109,7 @@ WARNING
         post_bundler
         create_database_yml
         install_binaries
+        run_migration
         run_assets_precompile_rake_task
       end
       config_detect
@@ -124,6 +125,31 @@ WARNING
     raise e
   end
 
+  def run_migration
+    instrument "ruby.run_migration" do
+      log("run_migration") do
+        migrate = rake.task("db:migrate")
+        return true unless migrate.is_defined?
+
+        topic("Preparing app for running migrations")
+
+        migrate.invoke(env: rake_env)
+
+        if migrate.success?
+          log "run_migration", :status => "success"
+          puts "Database migration completed (#{"%.2f" % migrate.time}s)"
+        else
+          migrate_fail(migrate.output)
+        end
+      end
+    end
+  end
+
+  def migrate_fail(output)
+    log "run_migration", :status => "failure"
+    msg = "Running migrations failed.\n"
+    error msg
+  end
 
   def build
     new_app?

@@ -27,6 +27,12 @@ class LanguagePack::Rails5 < LanguagePack::Rails42
     })
   end
 
+  def run_migration
+    instrument "rails5.run_migration" do
+      super
+    end
+  end
+
   def install_plugins
     # do not install plugins, do not call super, do not warn
   end

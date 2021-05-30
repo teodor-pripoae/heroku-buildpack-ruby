@@ -49,6 +49,12 @@ class LanguagePack::Rails3 < LanguagePack::Rails2
     @x_sendfile_config     = @rails_runner.detect("action_dispatch.x_sendfile_header")
   end
 
+  def run_migration
+    instrument "rails3.run_migration" do
+      super
+    end
+  end
+
   def best_practice_warnings
     super
     warn_x_sendfile_use!

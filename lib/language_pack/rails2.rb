@@ -69,6 +69,12 @@ class LanguagePack::Rails2 < LanguagePack::Ruby
     super
   end
 
+  def run_migration
+    instrument "rails2.run_migration" do
+      super
+    end
+  end
+
   def best_practice_warnings
     if env("RAILS_ENV") != "production"
       warn(<<-WARNING)
